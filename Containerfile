@@ -54,7 +54,8 @@ RUN --mount=type=secret,id=extra_ca,target=/run/secrets/extra_ca \
     fi; \
     pip install '/src/server[ai]' && rm -rf /src /tmp/ca.pem \
  && useradd --system --uid 10001 --home-dir /var/lib/sams --shell /usr/sbin/nologin sams \
- && install -d -o sams -g sams -m 0750 /var/lib/sams && install -d -m 0755 /etc/sams
+ && install -d -o sams -g sams -m 0750 /var/lib/sams && install -d -m 0755 /etc/sams \
+ && touch /etc/sams/tls.crt /etc/sams/tls.key   # mount points, so TLS works with --read-only
 COPY --from=agents /dist /opt/sams/dist
 USER 10001:10001
 WORKDIR /var/lib/sams

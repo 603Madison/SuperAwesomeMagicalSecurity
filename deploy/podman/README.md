@@ -67,3 +67,28 @@ Run CLI commands inside the container, for example `podman exec -it sams sams to
   ports, so every firewall would look like the same host. `Network=pasta` (the default on podman 5) keeps
   real source addresses; rootful podman is unaffected.
 * Ports 8443 and 5514 are unprivileged, so no extra capabilities are needed even rootless.
+
+## Rootful on a VLAN (macvlan), with HTTPS origin
+
+Hosts that put each container on its own VLAN run podman rootful (creating macvlan/ipvlan
+interfaces needs host privileges). Confine it with a per-container user namespace instead:
+
+```bash
+sudo podman run -d --name=sams \
+  --userns=auto:size=65536 --cap-drop=all --security-opt=no-new-privileges \
+  --pids-limit=512 --memory=1g --read-only --tmpfs /tmp \
+  --network dmz_vlan --ip 10.0.2.40 \
+  -e SAMS_PUBLIC_URL=https://sams-agents.example.org -e SAMS_TRUST_PROXY=true \
+  --secret sams-admin-token,type=env,target=SAMS_ADMIN_TOKEN \
+  --secret sams-tls-key,type=mount,target=/etc/sams/tls.key,uid=10001,gid=10001,mode=0400 \
+  -v /srv/podman/sams_data:/var/lib/sams:U \
+  -v /srv/podman/sams_tls/tls.crt:/etc/sams/tls.crt:ro \
+  --restart unless-stopped --label io.containers.autoupdate=local \
+  localhost/sams:latest server --host 0.0.0.0 --port 8443 --tls-cert /etc/sams/tls.crt --tls-key /etc/sams/tls.key
+```
+
+* `--userns=auto` needs a subuid/subgid range for the `containers` user (`/etc/subuid`, `/etc/subgid`).
+* The server needs **no** capabilities: the image already runs as UID 10001.
+* `/etc/sams/tls.crt` and `/etc/sams/tls.key` exist as empty files in the image so they can be mount
+  targets on a read-only root filesystem.
+* On macvlan, `-p` is ignored. The container has its own IP, so syslog keeps real source addresses.

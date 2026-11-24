@@ -115,7 +115,7 @@ func cmdRun(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	cfgPath := fs.String("config", client.DefaultConfigPath(), "enrollment config")
 	poll := fs.Duration("poll", 60*time.Second, "job poll interval")
-	once := fs.Bool("once", false, "process at most one job then exit")
+	once := fs.Bool("once", false, "poll once, process at most one job, then exit")
 	maxDur := fs.Duration("max-job-duration", 2*time.Hour, "hard cap on a single job's runtime")
 	_ = fs.Parse(args)
 
@@ -135,7 +135,10 @@ func cmdRun(ctx context.Context, args []string) error {
 		if err != nil {
 			log.Printf("error: %v", err)
 		}
-		if *once && (didJob || err != nil) {
+		if *once {
+			if !didJob && err == nil {
+				log.Printf("no job queued")
+			}
 			return err
 		}
 		wait := *poll

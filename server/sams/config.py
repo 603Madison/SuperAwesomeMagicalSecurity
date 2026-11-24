@@ -134,6 +134,7 @@ def load_settings(path: Optional[str | Path] = None) -> Settings:
     env_map = {
         "SAMS_DATA_DIR": "data_dir", "SAMS_LISTEN": "listen", "SAMS_PORT": "port",
         "SAMS_PUBLIC_URL": "public_url", "SAMS_ADMIN_TOKEN": "admin_token", "SAMS_DIST_DIR": "dist_dir",
+        "SAMS_TRUST_PROXY": "trust_proxy",
     }
     for env, key in env_map.items():
         val = env_secret(env)
