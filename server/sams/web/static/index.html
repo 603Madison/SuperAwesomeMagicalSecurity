@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SAMS · Security Posture</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 2 4 7v8c0 8 5 13 12 15 7-2 12-7 12-15V7z' fill='%237c5cff'/></svg>">
+</head>
+<body>
+  <div id="login" class="login hidden">
+    <form id="login-form" class="card">
+      <h1>🛡️ SuperAwesomeMagicalSecurity</h1>
+      <p class="muted">Paste the admin token printed when the server first started (or run <code>sams admin-token</code>).</p>
+      <input id="token-input" type="password" placeholder="sams_…" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
+      <p id="login-error" class="error"></p>
+    </form>
+  </div>
+
+  <div id="app" class="hidden">
+    <nav class="sidebar">
+      <div class="brand">🛡️ <span>SAMS</span></div>
+      <a href="#/overview" data-page="overview">Overview</a>
+      <a href="#/assets" data-page="assets">Assets</a>
+      <a href="#/findings" data-page="findings">Findings</a>
+      <a href="#/paths" data-page="paths">Attack paths</a>
+      <a href="#/plan" data-page="plan">Remediation</a>
+      <a href="#/siem" data-page="siem">SIEM</a>
+      <a href="#/firewalls" data-page="firewalls">Firewalls</a>
+      <a href="#/external" data-page="external">External</a>
+      <a href="#/agents" data-page="agents">Agents</a>
+      <a href="#/analyst" data-page="analyst">AI analyst</a>
+      <div class="spacer"></div>
+      <button id="logout" class="link">Sign out</button>
+    </nav>
+    <main id="main"><div class="loading">Loading…</div></main>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

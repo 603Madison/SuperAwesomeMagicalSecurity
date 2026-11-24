@@ -58,6 +58,9 @@ class AISettings(BaseModel):
     openai_compat_endpoint: bool = True
     # MCP server over streamable HTTP mounted at /mcp
     mcp_http: bool = True
+    # extra bearer tokens accepted by /mcp and /v1/chat/completions (besides the admin token),
+    # e.g. one per MCP client / LibreChat instance so they can be revoked independently
+    mcp_tokens: list[str] = Field(default_factory=list)
 
 
 class SIEMSettings(BaseModel):

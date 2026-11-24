@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 def utcnow() -> datetime:
@@ -370,6 +370,16 @@ class ExternalTargetResult(_Model):
     dns: dict[str, Any] = Field(default_factory=dict)       # {"spf": "...", "dmarc": "...", "axfr_open": bool, "mx": [...]}
     issues: list[dict[str, Any]] = Field(default_factory=list)  # probe-side findings: {"id","severity","title","detail","port"}
 
+    @field_validator("resolved", "services", "issues", mode="before")
+    @classmethod
+    def _none_list(cls, v: Any) -> Any:
+        return [] if v is None else v
+
+    @field_validator("dns", mode="before")
+    @classmethod
+    def _none_dict(cls, v: Any) -> Any:
+        return {} if v is None else v
+
 
 class ExternalScanResult(_Model):
     probe_id: str = ""
@@ -378,6 +388,11 @@ class ExternalScanResult(_Model):
     finished_at: datetime = Field(default_factory=utcnow)
     probe_public_ip: str = ""      # egress IP of the probe -- proves it is off-network
     targets: list[ExternalTargetResult] = Field(default_factory=list)
+
+    @field_validator("targets", mode="before")
+    @classmethod
+    def _none_targets(cls, v: Any) -> Any:
+        return [] if v is None else v
 
 
 # --------------------------------------------------------------------------- #

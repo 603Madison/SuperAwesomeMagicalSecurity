@@ -1,0 +1,56 @@
+# systemd unit for the SAMS external probe (see probe/README.md).
+#
+#   install -m 0755 sams-probe /usr/local/bin/sams-probe
+#   install -m 0644 sams-probe.service /etc/systemd/system/
+#   systemctl daemon-reload
+#   # enroll once, writing into the service's state directory:
+#   systemd-run --wait --pty -p DynamicUser=yes -p StateDirectory=sams-probe \
+#     /usr/local/bin/sams-probe enroll --config /var/lib/sams-probe/config.json \
+#       --server https://sams.example.com:8443 --token <TOKEN>
+#   systemctl enable --now sams-probe
+[Unit]
+Description=SuperAwesomeMagicalSecurity external probe (outside-in scanner)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/sams-probe run --config /var/lib/sams-probe/config.json
+Restart=on-failure
+RestartSec=30s
+
+# --- sandboxing: the probe only needs outbound TCP/UDP and its state dir ---
+DynamicUser=yes
+StateDirectory=sams-probe
+StateDirectoryMode=0700
+Environment=SAMS_PROBE_CONFIG=/var/lib/sams-probe/config.json
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+UMask=0077
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target
