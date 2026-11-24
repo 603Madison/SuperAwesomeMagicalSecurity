@@ -125,3 +125,25 @@ def test_finding_status_and_criticality(client):
     assert client.post(f"/api/v1/findings/{key}/status", json={"status": "accepted"}, headers=ADMIN).status_code == 200
     assert all(f["key"] != key for f in client.get("/api/v1/findings", headers=ADMIN).json())
     assert client.patch("/api/v1/assets/laptop", json={"criticality": 5}, headers=ADMIN).json()["criticality"] == 5
+
+
+def test_firewall_import_feeds_findings_and_graph(client):
+    from pathlib import Path
+    fx = Path(__file__).parent / "fixtures" / "firewall"
+    xml = next(p for p in fx.iterdir() if p.name.startswith("pfsense") and "hardened" not in p.name and p.suffix == ".xml")
+    r = client.post("/api/v1/firewalls/edge/import", content=xml.read_text(), headers={**ADMIN, "Content-Type": "text/plain"})
+    assert r.status_code == 200, r.text
+    assert r.json()["new"] > 0
+    fws = client.get("/api/v1/firewalls", headers=ADMIN).json()
+    assert any(f["id"] == "edge" and f["summary"]["rules"] > 0 for f in fws)
+    fs = client.get("/api/v1/findings", params={"asset_id": "fw:edge"}, headers=ADMIN).json()
+    assert any(f["severity"] in ("critical", "high") for f in fs)
+    exposed = client.get("/api/v1/firewalls/edge/exposed", headers=ADMIN).json()
+    assert exposed
+    # literal secrets are refused; env-var references are accepted
+    bad = client.post("/api/v1/firewalls", json={"id": "u", "name": "u", "vendor": "unifi",
+                                                 "connection": {"url": "https://x", "password": "hunter2"}}, headers=ADMIN)
+    assert bad.status_code == 400
+    ok = client.post("/api/v1/firewalls", json={"id": "u", "name": "u", "vendor": "unifi",
+                                                "connection": {"url": "https://x", "api_key_env": "UNIFI_KEY"}}, headers=ADMIN)
+    assert ok.status_code == 200

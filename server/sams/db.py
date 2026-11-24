@@ -185,9 +185,9 @@ class Store:
         with self._lock:
             return self._conn.execute(sql, tuple(args)).fetchall()
 
-    def _x(self, sql: str, args: Iterable[Any] = ()) -> sqlite3.Cursor:
+    def _x(self, sql: str, args: Iterable[Any] | dict = ()) -> sqlite3.Cursor:
         with self._lock:
-            return self._conn.execute(sql, tuple(args))
+            return self._conn.execute(sql, args if isinstance(args, dict) else tuple(args))
 
     # ------------------------------------------------------------------ #
     # kv
@@ -513,12 +513,13 @@ class Store:
     def upsert_firewall(self, device_id: str, vendor: str, name: str, connection: Optional[dict] = None,
                         config_json: Optional[str] = None) -> None:
         now = _iso(utcnow()) if config_json else None
-        self._x("INSERT INTO firewall_devices(id,vendor,name,connection,config,fetched_at) VALUES(?,?,?,?,?,?)"
+        conn = json.dumps(connection) if connection is not None else None
+        self._x("INSERT INTO firewall_devices(id,vendor,name,connection,config,fetched_at)"
+                " VALUES(:id,:vendor,:name,COALESCE(:conn,'{}'),:config,:now)"
                 " ON CONFLICT(id) DO UPDATE SET vendor=excluded.vendor, name=excluded.name,"
-                " connection=COALESCE(excluded.connection, connection),"
-                " config=COALESCE(excluded.config, config), fetched_at=COALESCE(excluded.fetched_at, fetched_at)",
-                (device_id, vendor, name, json.dumps(connection) if connection is not None else None,
-                 config_json, now))
+                " connection=COALESCE(:conn, connection),"
+                " config=COALESCE(:config, config), fetched_at=COALESCE(:now, fetched_at)",
+                {"id": device_id, "vendor": vendor, "name": name, "conn": conn, "config": config_json, "now": now})
 
     def list_firewalls(self) -> list[dict]:
         return [{"id": r["id"], "vendor": r["vendor"], "name": r["name"],

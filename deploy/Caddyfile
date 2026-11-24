@@ -1,0 +1,17 @@
+# Example reverse proxy for a DMZ deployment.
+# Public (internet) listener: only enrollment and the probe API, for off-network sams-probe instances.
+sams.example.com {
+	@probe path /api/v1/enroll /api/v1/probe/*
+	handle @probe {
+		reverse_proxy 127.0.0.1:8443
+	}
+	handle {
+		respond 404
+	}
+}
+
+# Internal listener (LAN / admin VPN): UI, admin API, agents, MCP and the OpenAI-compatible endpoint.
+sams.dmz.example.internal {
+	tls internal
+	reverse_proxy 127.0.0.1:8443
+}

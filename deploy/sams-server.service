@@ -1,0 +1,22 @@
+[Unit]
+Description=SuperAwesomeMagicalSecurity server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=sams
+Group=sams
+EnvironmentFile=-/etc/sams/env
+Environment=SAMS_CONFIG=/etc/sams/sams.yaml
+ExecStart=/opt/sams/venv/bin/sams server
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/sams
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target
