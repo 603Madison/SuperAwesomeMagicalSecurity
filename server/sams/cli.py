@@ -54,6 +54,10 @@ def cmd_token(args) -> None:
 def cmd_admin_token(args) -> None:
     from .api.deps import ensure_admin_token
     ctx = _ctx(args)
+    if ctx.settings.admin_token:
+        print("The admin token comes from SAMS_ADMIN_TOKEN (or admin_token in sams.yaml), so it was not changed.\n"
+              "To rotate it, replace that value (e.g. the podman secret) and restart the server.", file=sys.stderr)
+        sys.exit(1)
     ctx.store.kv_set("admin_token_hash", None)
     print(ensure_admin_token(ctx))
 
