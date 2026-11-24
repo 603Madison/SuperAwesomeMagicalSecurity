@@ -1,0 +1,119 @@
+# Windows Security / System / PowerShell event detections (agent ships EventLog as JSON lines)
+- id: win_failed_logon_burst
+  title: "Windows logon failures for {user} ({count} in 5 min)"
+  description: "Repeated 4625 failures against {user} on {host} (source {src_ip})."
+  severity: high
+  mitre: [T1110]
+  tags: [windows, bruteforce]
+  type: threshold
+  match:
+    action: win_logon_failed
+  threshold: {count: 10, window_seconds: 300, group_by: [host, user]}
+
+- id: win_failed_logon_spray
+  title: "Windows password spraying from {src_ip} ({count} accounts)"
+  severity: high
+  mitre: [T1110.003]
+  tags: [windows, bruteforce]
+  type: threshold
+  match:
+    action: win_logon_failed
+  threshold: {count: 5, window_seconds: 600, group_by: [src_ip], distinct: user}
+
+- id: win_account_lockout
+  title: "Account {user} locked out on {host}"
+  severity: medium
+  mitre: [T1110]
+  tags: [windows, bruteforce]
+  type: match
+  match:
+    action: account_locked
+
+- id: win_audit_log_cleared
+  title: "Security audit log cleared on {host} by {user}"
+  description: "Clearing the audit log (event 1102/104) is a strong indicator of anti-forensics."
+  severity: critical
+  mitre: [T1070.001]
+  tags: [windows, defense-evasion]
+  type: match
+  match:
+    action: audit_log_cleared
+
+- id: win_service_installed
+  title: "New service '{fields.service_name}' installed on {host}"
+  description: "Service image path: {fields.image_path}. Services are a common persistence and lateral-movement (PsExec) mechanism."
+  severity: medium
+  mitre: [T1543.003, T1569.002]
+  tags: [windows, persistence]
+  type: match
+  match:
+    action: service_installed
+
+- id: win_service_suspicious_path
+  title: "Service with suspicious image path installed on {host}"
+  description: "Service '{fields.service_name}' runs '{fields.image_path}' from a user-writable location or via a script host."
+  severity: high
+  mitre: [T1543.003]
+  tags: [windows, persistence]
+  type: match
+  match:
+    action: service_installed
+    fields.image_path: {regex: "(?i)(\\\\temp\\\\|\\\\appdata\\\\|\\\\users\\\\public\\\\|\\\\programdata\\\\|powershell|cmd(\\.exe)? /c|%comspec%|mshta|rundll32|regsvr32)"}
+
+- id: win_admin_group_change
+  title: "{user} added to {fields.group} on {host}"
+  description: "Membership change to a privileged Windows group by {fields.changed_by}."
+  severity: high
+  mitre: [T1098]
+  tags: [windows, iam, privesc]
+  type: match
+  match:
+    source: windows
+    action: group_member_added
+    fields.admin_group: true
+
+- id: win_user_created
+  title: "Windows account {user} created on {host}"
+  severity: medium
+  mitre: [T1136.001, T1136.002]
+  tags: [windows, persistence]
+  type: match
+  match:
+    source: windows
+    action: user_created
+
+- id: win_suspicious_powershell
+  title: "Suspicious PowerShell on {host}"
+  description: "PowerShell activity matched download/obfuscation patterns: {fields.suspicious_patterns}"
+  severity: high
+  mitre: [T1059.001, T1027]
+  tags: [windows, execution]
+  type: match
+  match:
+    fields.suspicious_command: true
+  any_of:
+    - {action: powershell_script}
+    - {action: process_created, process: {regex: "(?i)(powershell|pwsh)(\\.exe)?$"}}
+
+- id: win_office_spawned_shell
+  title: "Office application spawned {process} on {host}"
+  description: "{fields.parent_process} launched {process} ({fields.command}). Typical of macro-based initial access."
+  severity: high
+  mitre: [T1566.001, T1204.002]
+  tags: [windows, initial-access]
+  type: match
+  match:
+    action: process_created
+    fields.office_spawned_shell: true
+
+- id: win_rdp_logon_public
+  title: "RDP logon for {user} from public address {src_ip}"
+  description: "Remote interactive logon (type 10) from the internet. RDP should sit behind a VPN."
+  severity: high
+  mitre: [T1133, T1021.001]
+  tags: [windows, rdp, exposure]
+  type: match
+  match:
+    action: win_logon
+    fields.logon_type: 10
+    src_ip: {exists: true, not: {cidr: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, 100.64.0.0/10, "fc00::/7", "fe80::/10"]}}

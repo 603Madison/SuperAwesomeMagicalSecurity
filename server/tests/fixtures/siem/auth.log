@@ -1,0 +1,30 @@
+Nov 24 10:00:01 web01 sshd[1201]: Accepted publickey for alice from 192.168.1.50 port 52144 ssh2: ED25519 SHA256:abcDEF123+/xyzKEYfingerprint0000000000000
+Nov 24 10:00:02 web01 sshd[1202]: Accepted password for root from 203.0.113.9 port 40000 ssh2
+Nov 24 10:00:03 web01 sshd[1203]: Failed password for bob from 203.0.113.7 port 51515 ssh2
+Nov 24 10:00:04 web01 sshd[1204]: Failed password for invalid user admin from 203.0.113.7 port 51516 ssh2
+Nov 24 10:00:05 web01 sshd[1205]: Invalid user oracle from 203.0.113.7 port 51517
+Nov 24 10:00:06 web01 sshd[1206]: Connection closed by authenticating user root 203.0.113.7 port 51518 [preauth]
+Nov 24 10:00:07 web01 sshd[1207]: error: maximum authentication attempts exceeded for root from 203.0.113.7 port 51519 ssh2 [preauth]
+Nov 24 10:00:08 web01 sshd[1208]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.7  user=bob
+Nov 24 10:00:09 web01 sshd[1209]: Did not receive identification string from 198.51.100.4 port 33333
+Nov 24 10:00:10 web01 sshd[1210]: Failed publickey for carol from 10.0.0.9 port 2222 ssh2: RSA SHA256:zzz
+Nov 24 10:00:11 web01 sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/bin/bash
+Nov 24 10:00:12 web01 sudo:    alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/apt update
+Nov 24 10:00:13 web01 sudo:     mallory : user NOT in sudoers ; TTY=pts/1 ; PWD=/tmp ; USER=root ; COMMAND=/bin/cat /etc/shadow
+Nov 24 10:00:14 web01 sudo:     mallory : 3 incorrect password attempts ; TTY=pts/1 ; PWD=/tmp ; USER=root ; COMMAND=/bin/ls
+Nov 24 10:00:15 web01 sudo: pam_unix(sudo:auth): authentication failure; logname=mallory uid=1001 euid=0 tty=/dev/pts/1 ruser=mallory rhost=  user=mallory
+Nov 24 10:00:16 web01 su: pam_unix(su-l:session): session opened for user root(uid=0) by alice(uid=1000)
+Nov 24 10:00:17 web01 su: pam_unix(su:auth): authentication failure; logname=bob uid=1002 euid=0 tty=pts/2 ruser=bob rhost=  user=root
+Nov 24 10:00:18 web01 useradd[2201]: new user: name=backdoor, UID=0, GID=0, home=/root, shell=/bin/bash, from=/dev/pts/0
+Nov 24 10:00:19 web01 useradd[2202]: new group: name=deploy, GID=1005
+Nov 24 10:00:20 web01 usermod[2203]: add 'bob' to group 'sudo'
+Nov 24 10:00:21 web01 usermod[2204]: add 'bob' to shadow group 'sudo'
+Nov 24 10:00:22 web01 gpasswd[2205]: user carol added by root to group docker
+Nov 24 10:00:23 web01 passwd[2206]: pam_unix(passwd:chauthtok): password changed for root
+Nov 24 10:00:24 web01 systemd-logind[555]: New session 42 of user alice.
+Nov 24 10:00:25 web01 CRON[3001]: (root) CMD (/usr/local/bin/backup.sh)
+Nov 24 10:00:26 web01 kernel: [12345.678] [UFW BLOCK] IN=eth0 OUT= MAC=00:11:22:33:44:55 SRC=198.51.100.23 DST=192.168.1.10 LEN=60 TOS=0x00 PREC=0x00 TTL=50 ID=1 DF PROTO=TCP SPT=44321 DPT=3389 WINDOW=1024 RES=0x00 SYN URGP=0
+Nov 24 10:00:27 web01 kernel: [12346.000] IPTABLES-DROP: IN=eth0 OUT= SRC=198.51.100.24 DST=192.168.1.10 LEN=40 PROTO=UDP SPT=5353 DPT=161 LEN=20
+Nov 24 10:00:28 web01 userdel[2207]: delete user 'olduser'
+Nov 24 10:00:29 web01 dockerd[900]: time="2025-11-24T10:00:29Z" level=info msg="API listen on /run/docker.sock"
+Nov 24 10:00:30 web01 login[3100]: pam_unix(login:auth): authentication failure; logname=LOGIN uid=0 euid=0 tty=tty1 ruser= rhost=  user=root

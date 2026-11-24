@@ -1,0 +1,62 @@
+# Network / firewall log detections (pfSense/OPNsense filterlog, UniFi, UFW, iptables)
+- id: fw_port_scan
+  title: "Port scan from {src_ip} ({count} ports blocked)"
+  description: "{src_ip} hit {count} distinct destination ports within 60s and was blocked."
+  severity: medium
+  mitre: [T1046]
+  tags: [firewall, recon]
+  type: threshold
+  match:
+    category: firewall
+    action: blocked
+  threshold: {count: 20, window_seconds: 60, group_by: [src_ip], distinct: dst_port}
+
+- id: fw_horizontal_scan
+  title: "Horizontal scan from {src_ip} on port {dst_port} ({count} hosts)"
+  description: "{src_ip} probed {count} distinct hosts on port {dst_port} within 60s."
+  severity: medium
+  mitre: [T1046]
+  tags: [firewall, recon]
+  type: threshold
+  match:
+    category: firewall
+    action: blocked
+  threshold: {count: 20, window_seconds: 60, group_by: [src_ip, dst_port], distinct: dst_ip}
+
+- id: fw_internal_scan
+  title: "Internal host {src_ip} is scanning ({count} targets/ports)"
+  description: "An internal address generating scan-like blocked traffic usually means a compromised host doing discovery."
+  severity: high
+  mitre: [T1046, T1018]
+  tags: [firewall, lateral-movement]
+  type: threshold
+  match:
+    category: firewall
+    action: blocked
+    src_ip: {cidr: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16]}
+  threshold: {count: 30, window_seconds: 120, group_by: [src_ip], distinct: dst_ip}
+
+- id: fw_suspicious_egress
+  title: "Internal host {src_ip} attempted connections to {dst_ip}:{dst_port} (C2-associated port)"
+  description: "Outbound traffic to ports commonly used by reverse shells and IRC/C2 ({count} attempts in 5 min)."
+  severity: high
+  mitre: [T1571, T1095]
+  tags: [firewall, c2, egress]
+  type: threshold
+  match:
+    category: firewall
+    src_ip: {cidr: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16]}
+    dst_ip: {not: {cidr: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8]}}
+    dst_port: {in: [4444, 4445, 1337, 31337, 6666, 6667, 6668, 6669, 6697, 5555, 9001, 1080, 3127, 12345, 2222, 8888]}
+  threshold: {count: 3, window_seconds: 300, group_by: [src_ip, dst_port]}
+
+- id: fw_blocked_burst
+  title: "Burst of blocked traffic from {src_ip} ({count} packets/min)"
+  severity: low
+  mitre: [T1595]
+  tags: [firewall, recon]
+  type: threshold
+  match:
+    category: firewall
+    action: blocked
+  threshold: {count: 200, window_seconds: 60, group_by: [src_ip]}

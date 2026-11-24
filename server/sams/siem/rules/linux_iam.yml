@@ -1,0 +1,95 @@
+# Linux privilege and account management detections
+- id: sudo_denied
+  title: "sudo denied for {user} on {host}"
+  description: "{user} attempted '{fields.command}' via sudo but is not permitted ({fields.reason})."
+  severity: medium
+  mitre: [T1548.003]
+  tags: [linux, sudo, privesc]
+  type: match
+  match:
+    action: sudo_denied
+
+- id: sudo_failed_burst
+  title: "Repeated sudo password failures for {user} on {host}"
+  severity: medium
+  mitre: [T1548.003, T1110]
+  tags: [linux, sudo]
+  type: threshold
+  match:
+    action: sudo_failed
+  threshold: {count: 3, window_seconds: 300, group_by: [host, user]}
+
+- id: sudo_root_shell
+  title: "{user} spawned a root shell via sudo on {host}"
+  description: "sudo was used to run an interactive shell ('{fields.command}'). Legitimate for admins, but also the first step after a stolen session."
+  severity: low
+  mitre: [T1548.003, T1059.004]
+  tags: [linux, sudo]
+  type: match
+  match:
+    action: sudo
+    fields.root_shell: true
+
+- id: sudo_new_user_on_host
+  title: "First sudo use by {user} on {host}"
+  description: "{user} has not used sudo on {host} before."
+  severity: medium
+  mitre: [T1548.003]
+  tags: [linux, sudo, anomaly]
+  type: new_value
+  match:
+    action: sudo
+    outcome: success
+  new_value: {field: user, group_by: [host], learning_seconds: 604800}
+
+- id: linux_user_created
+  title: "New local account {user} created on {host}"
+  severity: medium
+  mitre: [T1136.001]
+  tags: [linux, persistence, iam]
+  type: match
+  match:
+    action: user_created
+    source: {not: {in: [windows]}}
+
+- id: uid0_account_created
+  title: "Account {user} created with UID 0 on {host}"
+  description: "A second UID 0 account is a classic backdoor."
+  severity: critical
+  mitre: [T1136.001, T1078.003]
+  tags: [linux, persistence, backdoor]
+  type: match
+  match:
+    action: user_created
+    fields.uid: 0
+
+- id: admin_group_membership_added
+  title: "{user} added to privileged group {fields.group} on {host}"
+  description: "Membership in {fields.group} grants administrative control of {host}."
+  severity: high
+  mitre: [T1098]
+  tags: [iam, privesc, persistence]
+  type: match
+  match:
+    action: group_member_added
+    fields.group: {in: [sudo, wheel, admin, adm, root, docker, lxd, Administrators, Domain Admins, Enterprise Admins, Schema Admins, Backup Operators, Account Operators, Server Operators, DnsAdmins]}
+
+- id: root_password_changed
+  title: "root password changed on {host}"
+  severity: medium
+  mitre: [T1098]
+  tags: [linux, iam]
+  type: match
+  match:
+    action: password_changed
+    user: root
+
+- id: su_failed_burst
+  title: "Repeated su failures by {user} on {host}"
+  severity: medium
+  mitre: [T1110, T1548]
+  tags: [linux, privesc]
+  type: threshold
+  match:
+    action: su_failed
+  threshold: {count: 3, window_seconds: 300, group_by: [host, user]}

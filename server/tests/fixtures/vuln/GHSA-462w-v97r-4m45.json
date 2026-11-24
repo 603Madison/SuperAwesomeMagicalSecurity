@@ -1,0 +1,13 @@
+{
+  "id": "GHSA-462w-v97r-4m45",
+  "summary": "Jinja2 sandbox escape via string formatting",
+  "details": "In Pallets Jinja before 2.10.1, str.format_map allows a sandbox escape.",
+  "aliases": ["CVE-2019-10906", "PYSEC-2019-217"],
+  "published": "2019-04-10T14:30:13Z",
+  "modified": "2024-01-01T00:00:00Z",
+  "database_specific": {"severity": "HIGH"},
+  "affected": [
+    {"package": {"name": "jinja2", "ecosystem": "PyPI"},
+     "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "2.10.1"}]}]}
+  ]
+}

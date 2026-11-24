@@ -1,0 +1,85 @@
+# SSH authentication detections (Linux sshd via auth.log / journald / syslog)
+- id: ssh_bruteforce
+  title: "SSH brute force from {src_ip} ({count} failures)"
+  description: "{count} failed SSH authentications from {src_ip} within {window_seconds}s against {host}."
+  severity: high
+  mitre: [T1110.001]
+  tags: [ssh, linux, bruteforce]
+  type: threshold
+  match:
+    action: {in: [ssh_failed, ssh_invalid_user, ssh_auth_failure]}
+  threshold: {count: 10, window_seconds: 300, group_by: [src_ip]}
+
+- id: ssh_password_spraying
+  title: "SSH password spraying from {src_ip} ({count} distinct users)"
+  description: "Failed SSH logins for {count} different accounts from {src_ip} within 10 minutes."
+  severity: high
+  mitre: [T1110.003]
+  tags: [ssh, linux, bruteforce]
+  type: threshold
+  match:
+    action: {in: [ssh_failed, ssh_invalid_user]}
+  threshold: {count: 5, window_seconds: 600, group_by: [src_ip], distinct: user}
+
+- id: ssh_bruteforce_success
+  title: "Successful SSH login after brute force from {src_ip}"
+  description: "Repeated SSH failures from {src_ip} were followed by a successful login as {user}. Treat the account as compromised."
+  severity: critical
+  mitre: [T1110, T1078]
+  tags: [ssh, linux, bruteforce, compromise]
+  type: sequence
+  sequence:
+    group_by: [src_ip]
+    within_seconds: 900
+    steps:
+      - match: {action: {in: [ssh_failed, ssh_invalid_user, ssh_auth_failure]}}
+        count: 5
+      - match: {action: ssh_login, outcome: success}
+
+- id: ssh_root_login
+  title: "Direct SSH root login on {host} from {src_ip}"
+  description: "root logged in directly over SSH ({fields.method}). Direct root logins bypass per-user accountability; disable PermitRootLogin."
+  severity: medium
+  mitre: [T1078.003]
+  tags: [ssh, linux, root]
+  type: match
+  match:
+    action: ssh_login
+    outcome: success
+    user: root
+
+- id: ssh_login_new_source
+  title: "SSH login for {user} from new source {src_ip}"
+  description: "{user} logged in over SSH from {src_ip}, an address not previously seen for this account."
+  severity: low
+  mitre: [T1078]
+  tags: [ssh, linux, anomaly]
+  type: new_value
+  match:
+    action: ssh_login
+    outcome: success
+  new_value: {field: src_ip, group_by: [user], learning_seconds: 604800}
+
+- id: ssh_invalid_user_probing
+  title: "SSH username enumeration from {src_ip}"
+  description: "{count} login attempts for non-existent accounts from {src_ip} within 10 minutes."
+  severity: medium
+  mitre: [T1110.001, T1589.003]
+  tags: [ssh, linux, recon]
+  type: threshold
+  match:
+    action: ssh_invalid_user
+  threshold: {count: 5, window_seconds: 600, group_by: [src_ip]}
+
+- id: ssh_public_login_password
+  title: "Password-based SSH login for {user} from public address {src_ip}"
+  description: "Password authentication from the internet is exposed to credential stuffing. Prefer keys and disable PasswordAuthentication."
+  severity: medium
+  mitre: [T1078, T1133]
+  tags: [ssh, linux, exposure]
+  type: match
+  match:
+    action: ssh_login
+    outcome: success
+    fields.method: {in: [password, keyboard-interactive]}
+    src_ip: {not: {cidr: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8, 100.64.0.0/10, "fc00::/7", "fe80::/10", "::1/128"]}}

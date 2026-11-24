@@ -52,6 +52,8 @@ class AISettings(BaseModel):
     default_provider: Optional[str] = None
     providers: list[AIProviderSettings] = Field(default_factory=list)
     max_tool_iterations: int = 12
+    # let the AI create (still approval-gated) patch tasks and change finding/alert status
+    allow_write_tools: bool = False
     # expose an OpenAI-compatible endpoint (/v1/chat/completions) for LibreChat / Open WebUI
     openai_compat_endpoint: bool = True
     # MCP server over streamable HTTP mounted at /mcp
@@ -87,6 +89,8 @@ class Settings(BaseModel):
     ai: AISettings = Field(default_factory=AISettings)
     siem: SIEMSettings = Field(default_factory=SIEMSettings)
     external: ExternalSettings = Field(default_factory=ExternalSettings)
+    # honour X-Forwarded-For (only when the server sits behind a reverse proxy you control)
+    trust_proxy: bool = False
     # treat hosts without firewall data as reachable from each other (pessimistic default)
     assume_flat_network: bool = True
 
