@@ -323,6 +323,19 @@ class VulnScanner:
         if n > 5:
             description += f"\n... and {n - 5} more"
         tags = [t for t, on in (("kev", kev), ("remote", remote), ("privesc", privesc)) if on]
+        kernel_note = None
+        if _is_kernel_source(q.name) and not any(_is_kernel_runtime_pkg(b) for b in bins):
+            # e.g. linux-libc-dev / linux-tools-common: kernel *source* advisories matched through
+            # header/tool packages. The running kernel is not this package, so these are not exploitable here.
+            kernel_note = ("Matched through kernel headers/tools packages only "
+                           f"({', '.join(bins)}); the running kernel is not affected by this package.")
+            severity = Severity.low if severity.weight > Severity.low.weight else severity
+            remote = privesc = False
+            tags = ["kernel_headers_only"]
+            title += " [headers only]"
+            description = kernel_note + "\n" + description
+        if not pv.fixed_version:
+            tags.append("no_fix")
         return Finding(
             key=f"vuln:{asset_id}:{q.manager}:{q.name}",
             asset_id=asset_id,
@@ -343,6 +356,8 @@ class VulnScanner:
                 "privesc": privesc,
                 "kev": kev,
                 "max_epss": max(epss_vals) if epss_vals else None,
+                "actionable": bool(pv.fixed_version),
+                "kernel_headers_only": bool(kernel_note),
             },
             remediation=remediation,
             references=remediation.references,
@@ -385,3 +400,22 @@ def suggest_ecosystems(inventories: list[Inventory]) -> list[str]:
             for q in qs or []:
                 out.add(versions.base_ecosystem(q.ecosystem))
     return sorted(out)
+
+
+_KERNEL_RUNTIME_PREFIXES = ("linux-image", "linux-modules", "kernel-core", "kernel-default", "kernel", "linux-lts",
+                            "linux-virt", "linux-generic")
+
+
+def _is_kernel_source(name: str) -> bool:
+    n = name.lower()
+    return n == "linux" or n.startswith("linux-") or n == "kernel"
+
+
+def _is_kernel_runtime_pkg(binary: str) -> bool:
+    b = binary.lower()
+    if b in ("linux-libc-dev", "kernel-headers", "linux-headers") or b.startswith(("linux-headers", "linux-tools",
+                                                                                   "linux-libc", "linux-source",
+                                                                                   "linux-doc", "kernel-headers",
+                                                                                   "kernel-devel", "kernel-tools")):
+        return False
+    return b.startswith(_KERNEL_RUNTIME_PREFIXES)

@@ -23,6 +23,7 @@ from typing import Any, Optional
 
 from ..graph.engine import ANY_USER, INTERNET, AttackGraph
 from ..models import Finding, Remediation, RemediationKind, Severity
+from ..posture import effective_weight
 
 W_EXT = 3.0
 W_INT = 1.0
@@ -149,7 +150,7 @@ def build_plan(ctx: Any, limit: int = 50) -> list[dict]:
         if f.key in used_findings or not f.remediation:
             continue
         crit = assets.get(f.asset_id or "", {}).get("criticality", 3)
-        hygiene.append((f.severity.weight * crit, f))
+        hygiene.append((effective_weight(f) * crit, f))
     hygiene.sort(key=lambda x: -x[0])
     for score, f in hygiene:
         rem = f.remediation

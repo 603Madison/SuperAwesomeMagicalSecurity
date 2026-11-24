@@ -1,0 +1,14 @@
+{
+ "ed25519": {
+  "fingerprint": "SHA256:9yUzxncsc2nWeXrX3cItq9dcMcZ3yi2zj4yjTkfxDXw",
+  "pub": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN08vfGRkLLgpDV34Mnn4S+8k8jwpiuA/6S1Ct8CWV5G"
+ },
+ "rsa": {
+  "fingerprint": "SHA256:CSQXG4OI1g9Xukw0EUOHzMH9RqIxfkcpzFnw/wv0bNI",
+  "pub": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCteui8PWDO6iS/638I9KKMHSdNRqTIKYHaDarlGxWaPRJsOGQio1C/6cub+N15916T78+YFjWbdxGfF2T1M0QaCx7GfpNQtzdbaBqMMW/1wKu0fA7sr6wKxHxXQXrDBv+KAvgMi9qMWePyyIOoTzZXzEKqgHHm/kpSigDGSqG+jYYdcSG6/GbYkCrFlKTwhvXL0IThh4K//HCPVZjRsFKo7FZ4WUKHJ4NfDHHTfonGK+MOYzjUocwzvYhM7ePQzJyww/J8bBY5pZW730AMN/XL0dmrzP+qQaXPPWZ+16U5ZUJ5AKiSnMiSw2/8Qt1pVTTeUwAfLRlRN1k2vQ1RS/L3"
+ },
+ "ecdsa": {
+  "fingerprint": "SHA256:oAVcCekaRzEivm52gGOmUWiwUhsFOojSYPudwkY7mI4",
+  "pub": "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIkx3gjmn3qJFg4DGzB7hi9hPooV2lL0fJ4yNPISTm2gksnxmmIyANbDYiERVuh7V6xWQLVX3PDw9SToBdsIWk0="
+ }
+}

@@ -329,7 +329,7 @@ async function showAsset(id) {
   const d = drawer(html`<h1>${a.name}</h1><div class="muted mono">${a.id} · ${a.kind}</div>
     <div class="row" style="margin:12px 0"><label>Criticality</label><select id="crit">${[1, 2, 3, 4, 5].map((c) => html`<option value="${c}" ${a.criticality === c ? raw("selected") : ""}>${c}${c >= 4 ? " (crown jewel)" : ""}</option>`)}</select>
       ${a.kind === "host" ? html`<button class="secondary" id="br-btn">Blast radius</button><button class="secondary" id="scan-btn">Rescan vulnerabilities</button>` : ""}</div>
-    ${inv ? html`<h3>System</h3><p>${inv.host.os.pretty || inv.host.os.name} · kernel ${inv.host.kernel} · ${inv.ips.join(", ")}<br><span class="muted">${inv.packages} packages · ${inv.users} users · admins: ${inv.admins.join(", ") || "–"} · collected ${fmtTime(inv.collected_at)}</span></p>
+    ${inv ? html`<h3>System</h3><p>${[inv.host.os.pretty || inv.host.os.name, inv.host.kernel && `kernel ${inv.host.kernel}`, inv.ips.join(", ")].filter(Boolean).join(" · ")}<br><span class="muted">${inv.packages} packages · ${inv.users} users · admins: ${inv.admins.join(", ") || "–"} · collected ${fmtTime(inv.collected_at)}</span></p>
       <h3>Network listeners</h3><table>${inv.listeners.map((l) => html`<tr><td class="mono">${l.proto}/${l.port}</td><td>${l.process}</td><td class="muted">${l.user}</td><td class="muted mono">${l.address}</td></tr>`)}</table>
       ${inv.credentials.length ? html`<h3>Credentials found on disk</h3><table>${inv.credentials.map((c) => html`<tr><td>${c.kind}</td><td>${c.owner}</td><td class="mono">${c.path}</td><td>${c.encrypted === false ? html`<span class="sev high">unencrypted</span>` : ""}</td></tr>`)}</table>` : ""}` : ""}
     <div id="br-out"></div>

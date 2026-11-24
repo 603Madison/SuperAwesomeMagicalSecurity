@@ -1,8 +1,10 @@
 """Posture scoring.
 
-Host score: ``100 × exp(-W / 60)`` where W sums open-finding weights
-(critical 25, high 10, medium 4, low 1). One critical finding leaves ~66,
-and the score never goes negative, so it degrades smoothly.
+Host score: ``100 × exp(-D / 70)`` where D sums, per severity bucket, ``w × log2(1 + S/w)``
+(w = critical 25, high 10, medium 4, low 1; S = the bucket's *effective* weight, which
+discounts unpatchable and non-exploitable vulnerabilities). Diminishing returns keep a
+host with hundreds of low-grade findings from flat-lining at zero, while every additional
+serious finding still costs points.
 
 Org score: the criticality-weighted mean of host scores, adjusted by how
 reachable crown jewels are from the internet (attack-graph external risk).
@@ -18,8 +20,31 @@ def grade(score: float) -> str:
     return "A" if score >= 90 else "B" if score >= 80 else "C" if score >= 70 else "D" if score >= 60 else "F"
 
 
-def _score(weight: float) -> float:
-    return round(100 * math.exp(-weight / 60.0), 1)
+SEV_W = {"critical": 25, "high": 10, "medium": 4, "low": 1, "info": 0}
+
+
+def effective_weight(f) -> float:
+    """How much a finding should count. Vulnerabilities nobody can patch yet, and ones
+    that are neither remotely exploitable, privilege escalations nor known-exploited,
+    are real but less urgent than a misconfiguration you can fix today."""
+    w = float(SEV_W[f.severity.value])
+    if f.category.value == "vulnerability":
+        ev = f.evidence or {}
+        if not ev.get("actionable", True):
+            w *= 0.25
+        if not (ev.get("remote_exploitable") or ev.get("privesc") or ev.get("kev")):
+            w *= 0.5
+    return w
+
+
+def _score(findings) -> float:
+    """Diminishing returns per severity bucket: the 50th medium finding matters less than the
+    first, but more criticals always lower the score. 1 fixable critical ≈ 70, 3 highs ≈ 75."""
+    buckets: dict[str, float] = defaultdict(float)
+    for f in findings:
+        buckets[f.severity.value] += effective_weight(f)
+    d = sum(SEV_W[s] * math.log2(1 + total / SEV_W[s]) for s, total in buckets.items() if SEV_W[s])
+    return round(100 * math.exp(-d / 70.0), 1)
 
 
 def compute(ctx: Any, include_graph: bool = True) -> dict:
@@ -33,8 +58,7 @@ def compute(ctx: Any, include_graph: bool = True) -> dict:
     num = den = 0.0
     for a in assets:
         fs = by_asset.get(a["id"], [])
-        w = sum(f.severity.weight for f in fs)
-        s = _score(w)
+        s = _score(fs)
         counts = Counter(f.severity.value for f in fs)
         hosts.append({"asset_id": a["id"], "name": a["name"], "kind": a["kind"], "criticality": a["criticality"],
                       "score": s, "grade": grade(s), "counts": dict(counts), "findings": len(fs),
@@ -42,8 +66,7 @@ def compute(ctx: Any, include_graph: bool = True) -> dict:
         num += s * a["criticality"]
         den += a["criticality"]
     base = num / den if den else 100.0
-    global_w = sum(f.severity.weight for f in by_asset.get("_global", []))
-    base *= math.exp(-global_w / 200.0)
+    base *= _score(by_asset.get("_global", [])) / 100.0 if by_asset.get("_global") else 1.0
     ext_risk = None
     paths = 0
     if include_graph and assets:

@@ -1,0 +1,158 @@
+{
+ "networkconf": [
+  {
+   "_id": "net-default",
+   "name": "Default",
+   "purpose": "corporate",
+   "ip_subnet": "192.168.1.1/24",
+   "dhcpd_enabled": true,
+   "networkgroup": "LAN"
+  },
+  {
+   "_id": "net-iot",
+   "name": "IoT",
+   "purpose": "corporate",
+   "ip_subnet": "192.168.30.1/24",
+   "vlan_enabled": true,
+   "vlan": 30,
+   "dhcpd_enabled": true
+  },
+  {
+   "_id": "net-guest",
+   "name": "Guest WiFi",
+   "purpose": "guest",
+   "ip_subnet": "192.168.40.1/24",
+   "vlan_enabled": true,
+   "vlan": 40
+  },
+  {
+   "_id": "net-cams",
+   "name": "Cameras",
+   "purpose": "corporate",
+   "ip_subnet": "192.168.50.1/24",
+   "vlan_enabled": true,
+   "vlan": 50,
+   "network_isolation_enabled": true
+  },
+  {
+   "_id": "net-l2",
+   "name": "Transit",
+   "purpose": "vlan-only",
+   "vlan_enabled": true,
+   "vlan": 99
+  },
+  {
+   "_id": "net-wan",
+   "name": "Internet 1",
+   "purpose": "wan",
+   "wan_networkgroup": "WAN",
+   "wan_type": "dhcp"
+  }
+ ],
+ "firewallgroup": [
+  {
+   "_id": "grp-admins",
+   "name": "Admins",
+   "group_type": "address-group",
+   "group_members": [
+    "192.168.1.10"
+   ]
+  },
+  {
+   "_id": "grp-mgmt",
+   "name": "Mgmt ports",
+   "group_type": "port-group",
+   "group_members": [
+    "22",
+    "443"
+   ]
+  }
+ ],
+ "firewallrule": [
+  {
+   "_id": "fr-1",
+   "ruleset": "WAN_LOCAL",
+   "rule_index": 2000,
+   "name": "Allow remote mgmt",
+   "enabled": true,
+   "action": "accept",
+   "protocol": "tcp",
+   "src_firewallgroup_ids": [],
+   "dst_firewallgroup_ids": [
+    "grp-mgmt"
+   ],
+   "logging": false
+  },
+  {
+   "_id": "fr-2",
+   "ruleset": "LAN_IN",
+   "rule_index": 2000,
+   "name": "allow established/related",
+   "enabled": true,
+   "action": "accept",
+   "protocol": "all",
+   "state_established": true,
+   "state_related": true
+  },
+  {
+   "_id": "fr-3",
+   "ruleset": "WANv6_IN",
+   "rule_index": 2000,
+   "name": "Allow all v6",
+   "enabled": true,
+   "action": "accept",
+   "protocol": "all"
+  },
+  {
+   "_id": "fr-4",
+   "ruleset": "WAN_IN",
+   "rule_index": 2001,
+   "name": "drop bad",
+   "enabled": true,
+   "action": "drop",
+   "protocol": "all",
+   "src_address": "192.0.2.0/24",
+   "logging": false
+  }
+ ],
+ "portforward": [
+  {
+   "_id": "pf-plex",
+   "name": "Plex",
+   "enabled": true,
+   "pfwd_interface": "wan",
+   "fwd": "192.168.1.30",
+   "fwd_port": "32400",
+   "dst_port": "32400",
+   "proto": "tcp",
+   "src": "any"
+  },
+  {
+   "_id": "pf-rdp",
+   "name": "RDP",
+   "enabled": true,
+   "pfwd_interface": "wan",
+   "fwd": "192.168.1.50",
+   "fwd_port": "3389",
+   "dst_port": "3389",
+   "proto": "tcp_udp",
+   "src": "any"
+  }
+ ],
+ "setting": [
+  {
+   "key": "usg",
+   "upnp_enabled": true
+  },
+  {
+   "key": "mgmt",
+   "x_ssh_enabled": true
+  }
+ ],
+ "health": [
+  {
+   "subsystem": "wan",
+   "wan_ip": "203.0.113.5"
+  }
+ ]
+}

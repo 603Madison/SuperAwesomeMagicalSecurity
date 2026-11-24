@@ -1,0 +1,147 @@
+{
+ "networkconf": [
+  {
+   "_id": "net-default",
+   "name": "Default",
+   "purpose": "corporate",
+   "ip_subnet": "192.168.1.1/24",
+   "dhcpd_enabled": true,
+   "networkgroup": "LAN"
+  },
+  {
+   "_id": "net-iot",
+   "name": "IoT",
+   "purpose": "corporate",
+   "ip_subnet": "192.168.30.1/24",
+   "vlan_enabled": true,
+   "vlan": 30,
+   "dhcpd_enabled": true
+  },
+  {
+   "_id": "net-guest",
+   "name": "Guest WiFi",
+   "purpose": "guest",
+   "ip_subnet": "192.168.40.1/24",
+   "vlan_enabled": true,
+   "vlan": 40
+  },
+  {
+   "_id": "net-l2",
+   "name": "Transit",
+   "purpose": "vlan-only",
+   "vlan_enabled": true,
+   "vlan": 99
+  },
+  {
+   "_id": "net-wan",
+   "name": "Internet 1",
+   "purpose": "wan",
+   "wan_networkgroup": "WAN",
+   "wan_type": "dhcp"
+  }
+ ],
+ "firewallgroup": [],
+ "zones": [
+  {
+   "_id": "z-int",
+   "name": "Internal",
+   "zone_key": "internal",
+   "network_ids": [
+    "net-default",
+    "net-iot"
+   ]
+  },
+  {
+   "_id": "z-ext",
+   "name": "External",
+   "zone_key": "external",
+   "network_ids": [
+    "net-wan"
+   ]
+  },
+  {
+   "_id": "z-gw",
+   "name": "Gateway",
+   "zone_key": "gateway",
+   "network_ids": []
+  },
+  {
+   "_id": "z-hot",
+   "name": "Hotspot",
+   "zone_key": "hotspot",
+   "network_ids": [
+    "net-guest"
+   ]
+  },
+  {
+   "_id": "z-dmz",
+   "name": "Dmz",
+   "zone_key": "dmz",
+   "network_ids": []
+  },
+  {
+   "_id": "z-vpn",
+   "name": "Vpn",
+   "zone_key": "vpn",
+   "network_ids": []
+  }
+ ],
+ "policies": [
+  {
+   "_id": "p-1",
+   "name": "IoT to NAS SMB",
+   "enabled": true,
+   "action": "ALLOW",
+   "index": 10000,
+   "protocol": "tcp",
+   "ip_version": "IPV4",
+   "source": {
+    "zone_id": "z-int",
+    "matching_target": "NETWORK",
+    "network_ids": [
+     "net-iot"
+    ]
+   },
+   "destination": {
+    "zone_id": "z-int",
+    "matching_target": "IP",
+    "ips": [
+     "192.168.1.20"
+    ],
+    "port_matching_type": "SPECIFIC",
+    "port": "445"
+   }
+  },
+  {
+   "_id": "p-2",
+   "name": "Allow mgmt from WAN",
+   "enabled": true,
+   "action": "ALLOW",
+   "index": 10001,
+   "protocol": "tcp",
+   "source": {
+    "zone_id": "z-ext",
+    "matching_target": "ANY"
+   },
+   "destination": {
+    "zone_id": "z-gw",
+    "matching_target": "ANY",
+    "port_matching_type": "SPECIFIC",
+    "port": "443"
+   }
+  }
+ ],
+ "portforward": [],
+ "setting": [
+  {
+   "key": "usg",
+   "upnp_enabled": false
+  }
+ ],
+ "health": [
+  {
+   "subsystem": "wan",
+   "wan_ip": "203.0.113.5"
+  }
+ ]
+}

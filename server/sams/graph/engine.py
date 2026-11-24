@@ -228,6 +228,7 @@ class AttackGraph:
         src = self.resolve_start(start)
         prob, pred = self.dijkstra(src, min_likelihood)
         start_asset = self.nodes[src].asset_id
+        start_is_root = self.nodes[src].attrs.get("privilege") == "root"
         reachable = []
         for nid, p in sorted(prob.items(), key=lambda kv: -kv[1]):
             if nid == src:
@@ -235,6 +236,9 @@ class AttackGraph:
             n = self.nodes[nid]
             if n.kind == "netpos":
                 continue
+            if (n.kind == "foothold" and start_asset and n.asset_id == start_asset
+                    and (start_is_root or n.attrs.get("privilege") != "root")):
+                continue   # lateral moves between accounts on the start host are noise; escalation to root is not
             path = self._path(pred, nid)
             reachable.append({"node": nid, "kind": n.kind, "label": n.label, "asset_id": n.asset_id,
                               "criticality": n.criticality, "likelihood": round(p, 4), "hops": len(path),

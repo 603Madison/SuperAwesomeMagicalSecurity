@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<opnsense>
+  <version>24.7</version>
+  <system>
+    <hostname>opn</hostname>
+    <domain>corp.example</domain>
+    <webgui><protocol>https</protocol><port>8443</port></webgui>
+    <ssh><enabled>enabled</enabled><port>22</port><permitrootlogin>1</permitrootlogin></ssh>
+  </system>
+  <interfaces>
+    <wan><enable>1</enable><if>vtnet0</if><descr>WAN</descr><ipaddr>dhcp</ipaddr></wan>
+    <lan><enable>1</enable><if>vtnet1</if><descr>LAN</descr><ipaddr>10.10.0.1</ipaddr><subnet>24</subnet></lan>
+    <opt1><enable>1</enable><if>vtnet2</if><descr>Servers</descr><ipaddr>10.20.0.1</ipaddr><subnet>24</subnet></opt1>
+    <opt2><enable>1</enable><if>vtnet3</if><descr>Cameras</descr><ipaddr>10.30.0.1</ipaddr><subnet>24</subnet></opt2>
+  </interfaces>
+  <filter>
+    <rule>
+      <type>pass</type><interface>lan</interface><ipprotocol>inet</ipprotocol>
+      <source><network>lan</network></source><destination><any/></destination>
+      <descr>Default allow LAN to any rule</descr>
+    </rule>
+    <rule>
+      <type>pass</type><interface>opt2</interface><ipprotocol>inet</ipprotocol>
+      <source><network>opt2</network></source><destination><any/></destination>
+      <descr>Cameras anything</descr>
+    </rule>
+    <rule>
+      <type>pass</type><interface>wan</interface><ipprotocol>inet</ipprotocol><protocol>tcp</protocol>
+      <source><any/></source><destination><network>(self)</network><port>8443</port></destination>
+      <descr>Remote admin</descr>
+    </rule>
+  </filter>
+  <nat>
+    <rule>
+      <source><any/></source>
+      <destination><network>wanip</network><port>5432</port></destination>
+      <protocol>tcp</protocol><target>DBServers</target><local-port>5432</local-port>
+      <interface>wan</interface><descr>Postgres for app</descr>
+    </rule>
+  </nat>
+  <OPNsense>
+    <Firewall>
+      <Alias>
+        <aliases>
+          <alias uuid="a1"><enabled>1</enabled><name>DBServers</name><type>host</type><content>10.20.0.15</content></alias>
+          <alias uuid="a2"><enabled>1</enabled><name>WebPorts</name><type>port</type><content>80
+443</content></alias>
+        </aliases>
+      </Alias>
+      <Filter>
+        <rules>
+          <rule uuid="r-mvc-1">
+            <enabled>1</enabled><sequence>10</sequence><action>block</action><quick>1</quick>
+            <interface>opt2</interface><direction>in</direction><ipprotocol>inet</ipprotocol><protocol>any</protocol>
+            <source_net>opt2</source_net><destination_net>lan</destination_net><log>1</log>
+            <description>Cameras cannot reach LAN</description>
+          </rule>
+          <rule uuid="r-mvc-2">
+            <enabled>1</enabled><sequence>20</sequence><action>pass</action><quick>1</quick>
+            <interface>lan</interface><direction>in</direction><ipprotocol>inet</ipprotocol><protocol>TCP</protocol>
+            <source_net>lan</source_net><destination_net>opt1</destination_net><destination_port>WebPorts</destination_port>
+            <description>LAN to servers web</description>
+          </rule>
+        </rules>
+      </Filter>
+    </Firewall>
+    <Syslog>
+      <destinations>
+        <destination uuid="s1"><enabled>1</enabled><transport>udp4</transport><hostname>10.10.0.5</hostname><port>5514</port></destination>
+      </destinations>
+    </Syslog>
+  </OPNsense>
+</opnsense>

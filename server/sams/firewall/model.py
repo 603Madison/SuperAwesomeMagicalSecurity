@@ -28,6 +28,23 @@ from pydantic import BaseModel, Field
 
 Action = Literal["allow", "block", "reject"]
 
+# Address space that is never "the internet". Python's ``is_private`` also flags
+# documentation/benchmark ranges (TEST-NET-1/2/3, 198.18/15), which are perfectly
+# routable in lab and test setups and would otherwise be mistaken for LAN space.
+_INTERNAL_NETS = [ipaddress.ip_network(n) for n in (
+    "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "169.254.0.0/16", "127.0.0.0/8",
+    "0.0.0.0/8", "fc00::/7", "fe80::/10", "::1/128")]
+
+
+def is_internal_ip(addr: "ipaddress.IPv4Address | ipaddress.IPv6Address | str") -> bool:
+    """RFC1918 / CGNAT / link-local / loopback / ULA, i.e. not internet-routable."""
+    if isinstance(addr, str):
+        try:
+            addr = ipaddress.ip_address(addr)
+        except ValueError:
+            return False
+    return any(addr.version == n.version and addr in n for n in _INTERNAL_NETS)
+
 
 class PortRange(BaseModel):
     start: int
@@ -85,6 +102,7 @@ class Rule(BaseModel):
     interface: str = ""             # network name the rule is evaluated on (ingress), "" = floating/any
     direction: str = "in"           # in | out | any
     protocol: str = "any"           # any | tcp | udp | tcp/udp | icmp | ...
+    ip_version: Optional[int] = None   # 4 or 6 = rule only applies to that family; None = both
     source: str = "any"
     source_not: bool = False
     source_ports: list[PortRange] = Field(default_factory=list)
@@ -160,9 +178,13 @@ class FirewallConfig(BaseModel):
         if best[1] is None:
             # anything not in an internal network is "the internet" from the WAN side
             wan = next((n for n in self.networks if n.is_wan), None)
-            if wan is not None and not addr.is_private:
+            if wan is not None and not is_internal_ip(addr):
                 return wan
         return best[1]
+
+    def self_addresses(self) -> set[str]:
+        """Addresses owned by the firewall (interface IPs + WAN addresses)."""
+        return {n.gateway_ip for n in self.networks if n.gateway_ip} | set(self.wan_addresses)
 
     def _alias(self, name: str) -> Optional[Alias]:
         for a in self.aliases:
@@ -177,6 +199,8 @@ class FirewallConfig(BaseModel):
         s = (spec or "any").strip()
         if s.lower() in ("any", "*", ""):
             return True
+        if s.startswith("!"):
+            return not self.address_matches(s[1:], ip, _depth + 1)
         try:
             addr = ipaddress.ip_address(ip)
         except ValueError:
@@ -212,7 +236,7 @@ class FirewallConfig(BaseModel):
                 n = self.network_by_name(s[: len(s) - len(suffix)].strip() if suffix else s)
                 if n is not None:
                     if n.is_wan and not n.cidrs:
-                        return not addr.is_private
+                        return not is_internal_ip(addr)
                     return any(self.address_matches(c, ip, _depth + 1) for c in n.cidrs)
         alias = self._alias(s)
         if alias is not None:
@@ -237,6 +261,12 @@ class FirewallConfig(BaseModel):
     def rule_matches(self, rule: Rule, src_ip: str, dst_ip: str, port: Optional[int], proto: str) -> bool:
         if not self._proto_matches(rule.protocol, proto):
             return False
+        if rule.ip_version is not None:
+            try:
+                if ipaddress.ip_address(dst_ip).version != rule.ip_version:
+                    return False
+            except ValueError:
+                pass
         src_ok = self.address_matches(rule.source, src_ip)
         if rule.source_not:
             src_ok = not src_ok
@@ -263,7 +293,9 @@ class FirewallConfig(BaseModel):
         dst_net = self.network_for_ip(dst_ip)
         if src_net is None and dst_net is None:
             return Decision(allowed=True, rule="not-routed-by-this-firewall", confident=False)
-        if src_net is not None and dst_net is not None and src_net.name == dst_net.name:
+        # traffic addressed to the firewall itself is always filtered on ingress
+        to_self = dst_ip in self.self_addresses()
+        if not to_self and src_net is not None and dst_net is not None and src_net.name == dst_net.name:
             if src_net.isolation:
                 return Decision(allowed=False, rule="client-isolation", interface=src_net.name)
             return Decision(allowed=True, rule="same-segment", interface=src_net.name)
@@ -271,7 +303,8 @@ class FirewallConfig(BaseModel):
         ingress = src_net.name if src_net is not None else "WAN"
 
         # inbound from the internet: must be port-forwarded (or target the firewall itself)
-        if src_net is not None and src_net.is_wan and dst_net is not None and not dst_net.is_wan:
+        if (not to_self and src_net is not None and src_net.is_wan
+                and dst_net is not None and not dst_net.is_wan):
             for pf in self.port_forwards:
                 if not pf.enabled or pf.internal_ip != dst_ip:
                     continue

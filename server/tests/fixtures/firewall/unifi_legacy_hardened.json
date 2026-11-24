@@ -1,0 +1,240 @@
+{
+ "networkconf": [
+  {
+   "_id": "net-default",
+   "name": "Default",
+   "purpose": "corporate",
+   "ip_subnet": "192.168.1.1/24",
+   "dhcpd_enabled": true,
+   "networkgroup": "LAN"
+  },
+  {
+   "_id": "net-iot",
+   "name": "IoT",
+   "purpose": "corporate",
+   "ip_subnet": "192.168.30.1/24",
+   "vlan_enabled": true,
+   "vlan": 30,
+   "dhcpd_enabled": true
+  },
+  {
+   "_id": "net-guest",
+   "name": "Guest WiFi",
+   "purpose": "guest",
+   "ip_subnet": "192.168.40.1/24",
+   "vlan_enabled": true,
+   "vlan": 40
+  },
+  {
+   "_id": "net-cams",
+   "name": "Cameras",
+   "purpose": "corporate",
+   "ip_subnet": "192.168.50.1/24",
+   "vlan_enabled": true,
+   "vlan": 50,
+   "network_isolation_enabled": true
+  },
+  {
+   "_id": "net-l2",
+   "name": "Transit",
+   "purpose": "vlan-only",
+   "vlan_enabled": true,
+   "vlan": 99
+  },
+  {
+   "_id": "net-wan",
+   "name": "Internet 1",
+   "purpose": "wan",
+   "wan_networkgroup": "WAN",
+   "wan_type": "dhcp"
+  }
+ ],
+ "firewallgroup": [
+  {
+   "_id": "grp-rfc1918",
+   "name": "RFC1918 nets",
+   "group_type": "address-group",
+   "group_members": [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+   ]
+  },
+  {
+   "_id": "grp-web",
+   "name": "Web",
+   "group_type": "port-group",
+   "group_members": [
+    "80",
+    "443"
+   ]
+  },
+  {
+   "_id": "grp-partners",
+   "name": "Partners",
+   "group_type": "address-group",
+   "group_members": [
+    "198.51.100.0/24"
+   ]
+  }
+ ],
+ "firewallrule": [
+  {
+   "_id": "h-0",
+   "ruleset": "LAN_IN",
+   "rule_index": 2000,
+   "name": "allow established/related",
+   "enabled": true,
+   "action": "accept",
+   "protocol": "all",
+   "state_established": true,
+   "state_related": true
+  },
+  {
+   "_id": "h-1",
+   "ruleset": "LAN_IN",
+   "rule_index": 2001,
+   "name": "IoT no private",
+   "enabled": true,
+   "action": "drop",
+   "protocol": "all",
+   "src_networkconf_id": "net-iot",
+   "src_networkconf_type": "NETv4",
+   "dst_firewallgroup_ids": [
+    "grp-rfc1918"
+   ]
+  },
+  {
+   "_id": "h-2",
+   "ruleset": "LAN_IN",
+   "rule_index": 2002,
+   "name": "IoT web out",
+   "enabled": true,
+   "action": "accept",
+   "protocol": "tcp",
+   "src_networkconf_id": "net-iot",
+   "src_networkconf_type": "NETv4",
+   "dst_firewallgroup_ids": [
+    "grp-web"
+   ]
+  },
+  {
+   "_id": "h-3",
+   "ruleset": "LAN_IN",
+   "rule_index": 2003,
+   "name": "IoT drop rest",
+   "enabled": true,
+   "action": "drop",
+   "protocol": "all",
+   "src_networkconf_id": "net-iot",
+   "src_networkconf_type": "NETv4"
+  },
+  {
+   "_id": "h-4",
+   "ruleset": "LAN_LOCAL",
+   "rule_index": 2000,
+   "name": "IoT DNS",
+   "enabled": true,
+   "action": "accept",
+   "protocol": "udp",
+   "src_networkconf_id": "net-iot",
+   "src_networkconf_type": "NETv4",
+   "dst_port": "53"
+  },
+  {
+   "_id": "h-5",
+   "ruleset": "LAN_LOCAL",
+   "rule_index": 2001,
+   "name": "IoT no gateway",
+   "enabled": true,
+   "action": "drop",
+   "protocol": "all",
+   "src_networkconf_id": "net-iot",
+   "src_networkconf_type": "NETv4"
+  },
+  {
+   "_id": "h-6",
+   "ruleset": "GUEST_IN",
+   "rule_index": 2000,
+   "name": "Guest web",
+   "enabled": true,
+   "action": "accept",
+   "protocol": "tcp",
+   "dst_firewallgroup_ids": [
+    "grp-web"
+   ]
+  },
+  {
+   "_id": "h-7",
+   "ruleset": "GUEST_IN",
+   "rule_index": 2001,
+   "name": "Guest drop tcp",
+   "enabled": true,
+   "action": "drop",
+   "protocol": "tcp",
+   "dst_address": "",
+   "logging": true
+  },
+  {
+   "_id": "h-8",
+   "ruleset": "WAN_IN",
+   "rule_index": 2000,
+   "name": "drop bad",
+   "enabled": true,
+   "action": "drop",
+   "protocol": "all",
+   "src_address": "192.0.2.0/24",
+   "logging": true
+  },
+  {
+   "_id": "h-9",
+   "ruleset": "LAN_LOCAL",
+   "rule_index": 2002,
+   "name": "Cameras no gateway",
+   "enabled": true,
+   "action": "drop",
+   "protocol": "all",
+   "src_networkconf_id": "net-cams",
+   "src_networkconf_type": "NETv4"
+  },
+  {
+   "_id": "h-10",
+   "ruleset": "LAN_IN",
+   "rule_index": 2004,
+   "name": "Cameras no internet",
+   "enabled": true,
+   "action": "drop",
+   "protocol": "all",
+   "src_networkconf_id": "net-cams",
+   "src_networkconf_type": "NETv4",
+   "logging": true
+  }
+ ],
+ "portforward": [
+  {
+   "_id": "pf-web",
+   "name": "Web (partners)",
+   "enabled": true,
+   "pfwd_interface": "wan",
+   "fwd": "192.168.1.30",
+   "fwd_port": "443",
+   "dst_port": "443",
+   "proto": "tcp",
+   "src": "198.51.100.0/24",
+   "src_limiting_enabled": true,
+   "src_limiting_type": "ip"
+  }
+ ],
+ "setting": [
+  {
+   "key": "usg",
+   "upnp_enabled": false
+  },
+  {
+   "key": "rsyslogd",
+   "enabled": true,
+   "ip": "192.168.1.5",
+   "port": 5514
+  }
+ ]
+}

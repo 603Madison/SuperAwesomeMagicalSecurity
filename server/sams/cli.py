@@ -180,8 +180,10 @@ def cmd_ask(args) -> None:
 
 
 def cmd_demo(args) -> None:
+    from .api.app import setup_siem
     from .demo import load_demo
     ctx = _ctx(args)
+    setup_siem(ctx)
     _print(load_demo(ctx))
 
 
