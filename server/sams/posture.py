@@ -65,6 +65,11 @@ def compute(ctx: Any, include_graph: bool = True) -> dict:
                       "last_seen": a["last_seen"]})
         num += s * a["criticality"]
         den += a["criticality"]
+    if not assets:
+        return {"score": None, "grade": "–", "hosts": [],
+                "counts": {"severity": {}, "category": {}, "assets": 0, "open_findings": 0},
+                "external_risk": None, "internet_attack_paths": 0,
+                "note": "No data yet: enroll an agent, import a firewall config or run an external scan."}
     base = num / den if den else 100.0
     base *= _score(by_asset.get("_global", [])) / 100.0 if by_asset.get("_global") else 1.0
     ext_risk = None

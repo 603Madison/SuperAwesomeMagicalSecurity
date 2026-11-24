@@ -45,6 +45,7 @@ h3 { font-size: 14px; margin: 16px 0 8px; }
 .grade { display: inline-grid; place-items: center; width: 54px; height: 54px; border-radius: 14px; font-size: 26px; font-weight: 800; color: white; }
 .grade.A { background: var(--ok); } .grade.B { background: #5aa832; } .grade.C { background: var(--med); }
 .grade.D { background: var(--high); } .grade.F { background: var(--crit); }
+.grade.none { background: var(--info); }
 
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }

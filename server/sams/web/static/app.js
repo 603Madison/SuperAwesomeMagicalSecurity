@@ -76,7 +76,7 @@ const pages = {
     render(html`
       <div class="page-head"><div><h1>Security posture</h1><div class="muted">${st.counts.assets} assets · ${st.agents} agents · ${st.probes} external probes · ${st.firewalls} firewalls</div></div></div>
       <div class="grid kpis">
-        <div class="card kpi"><div class="label">Posture</div><div class="row" style="margin-top:6px"><span class="grade ${st.grade}">${st.grade}</span><span class="value">${st.score}</span></div></div>
+        <div class="card kpi"><div class="label">Posture</div><div class="row" style="margin-top:6px"><span class="grade ${st.score == null ? "none" : st.grade}">${st.grade}</span><span class="value">${st.score ?? ""}</span></div>${st.score == null ? html`<div class="muted" style="font-size:12px;margin-top:6px">No data yet</div>` : ""}</div>
         <div class="card kpi"><div class="label">Critical</div><div class="value" style="color:var(--crit)">${c.critical || 0}</div></div>
         <div class="card kpi"><div class="label">High</div><div class="value" style="color:var(--high)">${c.high || 0}</div></div>
         <div class="card kpi"><div class="label">Internet attack paths</div><div class="value">${st.internet_attack_paths}</div></div>
