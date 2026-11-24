@@ -40,7 +40,8 @@ def _secret(conn: dict[str, Any], env_key: str, required: bool = True) -> str | 
         if required:
             raise ValueError(f"connection is missing '{env_key}' (name of the environment variable holding it)")
         return None
-    value = os.environ.get(str(name))
+    from ..config import env_secret
+    value = env_secret(str(name))
     if value is None and required:
         raise ValueError(f"environment variable {name!r} (from {env_key}) is not set")
     return value

@@ -1,0 +1,11 @@
+.git
+.venv
+**/__pycache__
+**/.pytest_cache
+data
+agent/bin
+agent/dist
+probe/bin
+server/tests
+*.db
+sams.yaml

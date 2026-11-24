@@ -23,6 +23,24 @@ make all           # bin/sams-agent-{linux-amd64,linux-arm64,darwin-arm64,window
 make build         # bin/sams-agent for the current platform
 ```
 
+## Install from your SAMS server (Linux)
+
+```bash
+curl -fsSL https://<sams-server>:8443/install.sh | sudo sh -s -- --token <token> [--allow-patching] [--ca-file ca.pem]
+```
+
+Or install a package (`make packages` builds `dist/*.deb` and `dist/*.rpm` for amd64 and arm64 with
+[nfpm](https://nfpm.goreleaser.com); the server image also serves them under `/downloads`):
+
+```bash
+sudo apt install ./dist/sams-agent_0.1.0_amd64.deb
+sudo sams-agent enroll --server https://<sams-server>:8443 --token <token>
+sudo systemctl enable --now sams-agent
+```
+
+Packages put the binary in `/usr/bin` and the unit in `/usr/lib/systemd/system`. Removing the package
+stops the service and keeps `/etc/sams-agent` (the enrollment); purge it by hand to unenroll.
+
 ## Install & enroll (Linux)
 
 ```sh

@@ -261,7 +261,7 @@ const pages = {
         ${agents.map((a) => html`<tr><td>${a.name}<div class="muted mono">${a.id}</div></td><td>${a.kind}</td><td>${a.version}</td><td class="mono">${a.asset_id || ""}</td><td class="muted">${fmtTime(a.last_seen)}</td><td>${a.revoked ? "revoked" : html`<button class="secondary" data-revoke="${a.id}">Revoke</button>`}</td></tr>`)}</table></div>`);
     $("#tok-go").onclick = async () => {
       const r = await api("/api/v1/tokens", { method: "POST", body: { kind: $("#tok-kind").value } });
-      $("#tok-out").innerHTML = String(html`<p class="muted">Single-use, expires in ${r.expires_in_hours}h. Run on the ${r.kind === "probe" ? "external host" : "machine to protect"}:</p><pre>${r.command}</pre><p class="muted">Server signing key (pinned by the agent): <code>${r.server_public_key}</code></p>`);
+      $("#tok-out").innerHTML = String(html`<p class="muted">Single-use, expires in ${r.expires_in_hours}h. Run on the ${r.kind === "probe" ? "external host" : "Linux machine to protect"}:</p><pre>${r.install_command || r.command}</pre>${r.install_command ? html`<p class="muted">Already have the binary or a .deb/.rpm installed? Use:</p><pre>${r.command}</pre>` : ""}<p class="muted">Server signing key (pinned by the agent): <code>${r.server_public_key}</code></p>`);
     };
     document.querySelectorAll("[data-approve]").forEach((b) => (b.onclick = async () => { try { await api(`/api/v1/tasks/${b.dataset.approve}/approve`, { method: "POST" }); toast("Approved and signed"); pages.agents(); } catch (e) { toast(e.message); } }));
     document.querySelectorAll("[data-reject]").forEach((b) => (b.onclick = async () => { await api(`/api/v1/tasks/${b.dataset.reject}/reject`, { method: "POST" }); pages.agents(); }));

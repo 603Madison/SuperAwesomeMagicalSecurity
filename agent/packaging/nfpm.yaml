@@ -1,0 +1,27 @@
+# Build with: make packages   (needs nfpm: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.1)
+name: sams-agent
+arch: ${PKG_ARCH}
+platform: linux
+version: ${PKG_VERSION}
+section: admin
+priority: optional
+maintainer: SuperAwesomeMagicalSecurity <security@example.invalid>
+description: |
+  SuperAwesomeMagicalSecurity host agent.
+  Reports inventory and auth logs to a SAMS server and applies signed,
+  human-approved patch tasks when allow_patching is enabled locally.
+homepage: https://github.com/603madison/superawesomemagicalsecurity
+license: Proprietary
+contents:
+  - src: ./bin/.pkg/sams-agent        # staged per arch by `make packages`
+    dst: /usr/bin/sams-agent
+    file_info: {mode: 0755}
+  - src: ./packaging/pkg/sams-agent.service
+    dst: /usr/lib/systemd/system/sams-agent.service
+    file_info: {mode: 0644}
+  - dst: /etc/sams-agent
+    type: dir
+    file_info: {mode: 0700}
+scripts:
+  postinstall: ./packaging/pkg/postinstall.sh
+  preremove: ./packaging/pkg/preremove.sh

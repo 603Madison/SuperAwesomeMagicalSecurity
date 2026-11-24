@@ -1,0 +1,27 @@
+[Unit]
+Description=SuperAwesomeMagicalSecurity host agent
+Documentation=https://github.com/603madison/superawesomemagicalsecurity
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/sams-agent run --config /etc/sams-agent/config.json
+Restart=always
+RestartSec=10
+# The agent needs root to read /etc/shadow, other users' homes, /proc/*/fd
+# and (when allow_patching is enabled) to run the package manager.
+User=root
+Nice=10
+IOSchedulingClass=idle
+# Hardening that does not interfere with inventory collection or patching
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

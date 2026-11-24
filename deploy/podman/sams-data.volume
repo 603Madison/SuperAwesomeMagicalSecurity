@@ -1,0 +1,4 @@
+# Persistent data: SQLite DB, Ed25519 signing key, vulnerability caches. Back this up;
+# agents pin the signing key, so losing it means re-enrolling every agent.
+[Volume]
+VolumeName=sams-data

@@ -16,6 +16,19 @@ import yaml
 from pydantic import BaseModel, Field
 
 
+def env_secret(name: str) -> Optional[str]:
+    """Read a secret from $NAME, or from the file named by $NAME_FILE (container secrets convention)."""
+    if os.environ.get(name):
+        return os.environ[name]
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        try:
+            return Path(path).read_text().strip() or None
+        except OSError:
+            return None
+    return None
+
+
 class VulnSettings(BaseModel):
     # online: query api.osv.dev (sends package names+versions to Google's OSV service)
     # offline: only use the local mirror synced with `sams vulndb sync` (nothing leaves the network)
@@ -44,7 +57,7 @@ class AIProviderSettings(BaseModel):
     extra: dict[str, Any] = Field(default_factory=dict)
 
     def api_key(self) -> Optional[str]:
-        return os.environ.get(self.api_key_env) if self.api_key_env else None
+        return env_secret(self.api_key_env) if self.api_key_env else None
 
 
 class AISettings(BaseModel):
@@ -84,6 +97,9 @@ class Settings(BaseModel):
     listen: str = "127.0.0.1"
     port: int = 8443
     public_url: str = ""             # URL agents/probes use (DMZ address)
+    # where agent/probe binaries + SHA256SUMS + install.sh are served from (/downloads, /install.sh).
+    # The container image ships them in /opt/sams/dist; otherwise <data_dir>/dist is used.
+    dist_dir: Path = Path("/opt/sams/dist")
     admin_token: Optional[str] = None
     agent_collect_interval: int = 3600
     agent_log_sources: list[str] = Field(default_factory=lambda: [
@@ -117,11 +133,12 @@ def load_settings(path: Optional[str | Path] = None) -> Settings:
         data = yaml.safe_load(cfg_path.read_text()) or {}
     env_map = {
         "SAMS_DATA_DIR": "data_dir", "SAMS_LISTEN": "listen", "SAMS_PORT": "port",
-        "SAMS_PUBLIC_URL": "public_url", "SAMS_ADMIN_TOKEN": "admin_token",
+        "SAMS_PUBLIC_URL": "public_url", "SAMS_ADMIN_TOKEN": "admin_token", "SAMS_DIST_DIR": "dist_dir",
     }
     for env, key in env_map.items():
-        if os.environ.get(env):
-            data[key] = os.environ[env]
+        val = env_secret(env)
+        if val:
+            data[key] = val
     if os.environ.get("SAMS_VULN_MODE"):
         data.setdefault("vuln", {})["mode"] = os.environ["SAMS_VULN_MODE"]
     return Settings.model_validate(data)

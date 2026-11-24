@@ -289,11 +289,14 @@ def token(body: TokenCreate, request: Request, ctx: Any = Depends(get_ctx)) -> d
     if body.kind not in ("host", "probe"):
         raise HTTPException(400, "kind must be host or probe")
     tok = ctx.store.create_enroll_token(body.kind, body.label, body.uses, body.ttl_hours)
-    server = ctx.settings.public_url or str(request.base_url).rstrip("/")
+    server = (ctx.settings.public_url or str(request.base_url)).rstrip("/")
     binary = "sams-agent" if body.kind == "host" else "sams-probe"
-    return {"token": tok, "kind": body.kind, "expires_in_hours": body.ttl_hours,
-            "command": f"{binary} enroll --server {server} --token {tok}",
-            "server_public_key": ctx.signer.public_key_b64}
+    out = {"token": tok, "kind": body.kind, "expires_in_hours": body.ttl_hours,
+           "command": f"{binary} enroll --server {server} --token {tok}",
+           "server_public_key": ctx.signer.public_key_b64}
+    if body.kind == "host":
+        out["install_command"] = f"curl -fsSL {server}/install.sh | sudo sh -s -- --token {tok}"
+    return out
 
 
 # --------------------------------------------------------------------------- #

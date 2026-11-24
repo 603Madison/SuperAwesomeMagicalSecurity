@@ -147,3 +147,25 @@ def test_firewall_import_feeds_findings_and_graph(client):
     ok = client.post("/api/v1/firewalls", json={"id": "u", "name": "u", "vendor": "unifi",
                                                 "connection": {"url": "https://x", "api_key_env": "UNIFI_KEY"}}, headers=ADMIN)
     assert ok.status_code == 200
+
+
+def test_installer_and_downloads(client, tmp_path):
+    import hashlib
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "sams-agent-linux-amd64").write_bytes(b"\x7fELFfake")
+    (dist / "SHA256SUMS").write_text(hashlib.sha256(b"\x7fELFfake").hexdigest() + "  sams-agent-linux-amd64\n")
+    (dist / "secret.txt").write_text("nope")
+    client.ctx.settings.dist_dir = dist
+    client.ctx.settings.public_url = "https://sams.example:8443"
+    r = client.get("/install.sh")
+    assert r.status_code == 200 and 'SERVER="https://sams.example:8443"' in r.text and "__SAMS_SERVER__" not in r.text
+    assert client.get("/downloads").json()["files"] == ["SHA256SUMS", "sams-agent-linux-amd64"]
+    assert client.get("/downloads/sams-agent-linux-amd64").content == b"\x7fELFfake"
+    assert client.get("/downloads/secret.txt").status_code == 404
+    assert client.get("/downloads/..%2Fsams.db").status_code == 404
+    client.ctx.settings.public_url = "https://evil.example/$(reboot)"
+    assert client.get("/install.sh").status_code == 400
+    client.ctx.settings.public_url = ""
+    tok = client.post("/api/v1/tokens", json={"kind": "host"}, headers=ADMIN).json()
+    assert tok["install_command"].startswith("curl -fsSL http://testserver/install.sh | sudo sh -s -- --token ")

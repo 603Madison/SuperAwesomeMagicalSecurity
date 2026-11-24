@@ -1,0 +1,60 @@
+# Quadlet unit: systemd runs the SAMS server container (podman >= 4.4).
+#
+# Rootless install (recommended):
+#   mkdir -p ~/.config/containers/systemd
+#   cp sams.container sams-data.volume ~/.config/containers/systemd/
+#   printf '%s' "$(openssl rand -base64 32)" | podman secret create sams-admin-token -
+#   systemctl --user daemon-reload && systemctl --user start sams
+#   loginctl enable-linger "$USER"     # keep it running after you log out
+# Rootful: copy the files to /etc/containers/systemd/ and use `systemctl` without --user.
+
+[Unit]
+Description=SuperAwesomeMagicalSecurity server
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=sams
+Image=localhost/sams:latest
+# Image=ghcr.io/<you>/sams:latest   # if you push the image to a registry
+AutoUpdate=local
+
+Volume=sams-data.volume:/var/lib/sams:Z
+# Optional config file (otherwise defaults + environment below):
+# Volume=/etc/sams/sams.yaml:/etc/sams/sams.yaml:ro,Z
+
+# HTTPS for agents/UI. Put a reverse proxy in front for TLS (see deploy/Caddyfile),
+# or mount a cert and add: Exec=server --host 0.0.0.0 --port 8443 --tls-cert /certs/tls.crt --tls-key /certs/tls.key
+PublishPort=8443:8443/tcp
+# Syslog from firewalls / switches
+PublishPort=5514:5514/udp
+PublishPort=5514:5514/tcp
+# Rootless podman < 5 rewrites the source IP of published ports, so syslog would appear
+# to come from the gateway. pasta keeps real source addresses (default on podman 5):
+Network=pasta
+
+Environment=SAMS_PUBLIC_URL=https://sams.dmz.example:8443
+# Secrets come from `podman secret create`, never from this file.
+Secret=sams-admin-token,type=env,target=SAMS_ADMIN_TOKEN
+# Secret=anthropic-api-key,type=env,target=ANTHROPIC_API_KEY
+# Secret=unifi-api-key,type=env,target=UNIFI_API_KEY
+
+# Hardening: the server needs no privileges and only writes to its volume.
+ReadOnly=true
+Tmpfs=/tmp
+DropCapability=ALL
+NoNewPrivileges=true
+User=10001
+Group=10001
+
+HealthCmd=python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8443/healthz', timeout=4)"
+HealthInterval=30s
+HealthStartPeriod=20s
+HealthRetries=3
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

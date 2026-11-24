@@ -55,14 +55,27 @@ sams --data-dir ./scratch analyze /tmp/inv.json
 
 ### 1. Server (DMZ)
 
+**Podman (recommended).** Rootless, systemd-managed through Quadlet, read-only root filesystem, no capabilities:
+
 ```bash
-pip install './server[ai]'              # or: docker build -t sams server/
+podman build -t localhost/sams:latest .
+cp deploy/podman/sams.container deploy/podman/sams-data.volume ~/.config/containers/systemd/
+printf '%s' "$(openssl rand -base64 32)" | podman secret create sams-admin-token -
+systemctl --user daemon-reload && systemctl --user start sams
+```
+
+Full instructions, compose file and networking notes: [deploy/podman/README.md](deploy/podman/README.md).
+
+**Without containers:**
+
+```bash
+pip install './server[ai]'
 cp sams.example.yaml sams.yaml          # edit public_url, ports, AI providers
 sams server --host 0.0.0.0 --port 8443 --tls-cert cert.pem --tls-key key.pem
 ```
 
-On first start the server prints a one-time **admin token**. It also creates an Ed25519 **signing key**
-in `data_dir`; agents and probes pin it at enrollment, so back it up.
+On first start the server prints a one-time **admin token** unless you set one. It also creates an Ed25519 **signing key**
+in `data_dir`. Agents and probes pin that key at enrollment, so back it up.
 
 Recommended DMZ exposure (see [deploy/Caddyfile](deploy/Caddyfile)):
 
@@ -73,16 +86,27 @@ Recommended DMZ exposure (see [deploy/Caddyfile](deploy/Caddyfile)):
 | **Internet** (probes) | server :443 | **only** `/api/v1/enroll` and `/api/v1/probe/*` |
 | Admin network / VPN | server :443 | everything (UI, `/api/v1/*`, `/mcp`, `/v1/*`) |
 
-### 2. Agents (every host you want assessed)
+### 2. Linux agent (every host you want assessed)
+
+Create a token (UI → Agents, or `sams token --kind host`). The dashboard shows a one-liner like:
 
 ```bash
-sams token --kind host                 # or "Agents → Create enrollment token" in the UI
-sudo sams-agent enroll --server https://sams.dmz.example --token <token>
-sudo systemctl enable --now sams-agent # unit file in agent/packaging/
+curl -fsSL https://sams.dmz.example:8443/install.sh | sudo sh -s -- --token <token>
 ```
 
-Patching is **off by default** on each host. To allow approved patch tasks, set `"allow_patching": true`
-in `/etc/sams-agent/config.json`. Even then, every task must be approved in the UI and signed by the server.
+The installer downloads the agent for the host's CPU (amd64 or arm64) from your server and verifies its SHA256.
+It then installs `/usr/local/bin/sams-agent` and a systemd unit, enrolls, and starts the service. Re-running it upgrades in place.
+
+Prefer packages? The server also hosts `.deb` and `.rpm` files (`/downloads`), or build them with `cd agent && make packages`:
+
+```bash
+sudo apt install ./sams-agent_0.1.0_amd64.deb      # or: sudo dnf install ./sams-agent-0.1.0-1.x86_64.rpm
+sudo sams-agent enroll --server https://sams.dmz.example:8443 --token <token>
+sudo systemctl enable --now sams-agent
+```
+
+Patching is **off by default** on each host. To allow approved patch tasks, enroll with `--allow-patching` or set
+`"allow_patching": true` in `/etc/sams-agent/config.json`. Even then, every task must be approved in the UI and signed by the server.
 
 ### 3. External probes (outside your network)
 

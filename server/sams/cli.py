@@ -46,6 +46,8 @@ def cmd_token(args) -> None:
     server = ctx.settings.public_url or "https://<sams-server>"
     binary = "sams-agent" if args.kind == "host" else "sams-probe"
     print(tok)
+    if args.kind == "host":
+        print(f"\n  curl -fsSL {server}/install.sh | sudo sh -s -- --token {tok}", file=sys.stderr)
     print(f"\n  {binary} enroll --server {server} --token {tok}", file=sys.stderr)
 
 

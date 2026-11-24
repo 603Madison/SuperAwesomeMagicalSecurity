@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .. import __version__
 from ..context import AppContext
-from . import admin, agents
+from . import admin, agents, downloads
 from .deps import ensure_admin_token
 
 log = logging.getLogger("sams")
@@ -61,6 +61,7 @@ def create_app(ctx: AppContext, start_listeners: bool = True) -> FastAPI:
     setup_siem(ctx)
     app.include_router(agents.router)
     app.include_router(admin.router)
+    app.include_router(downloads.router)
     _mount_ai(app, ctx)
 
     @app.get("/healthz", include_in_schema=False)

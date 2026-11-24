@@ -1,0 +1,36 @@
+# podman-compose up -d   (or: docker compose up -d)
+# Create secrets first:
+#   printf '%s' "$(openssl rand -base64 32)" | podman secret create sams-admin-token -
+services:
+  sams:
+    image: localhost/sams:latest
+    build:
+      context: ../..
+      dockerfile: Containerfile
+    container_name: sams
+    restart: unless-stopped
+    ports:
+      - "8443:8443/tcp"
+      - "5514:5514/udp"
+      - "5514:5514/tcp"
+    environment:
+      SAMS_PUBLIC_URL: https://sams.dmz.example:8443
+      SAMS_ADMIN_TOKEN_FILE: /run/secrets/sams-admin-token
+    secrets:
+      - sams-admin-token
+    volumes:
+      - sams-data:/var/lib/sams:Z
+      # - ./sams.yaml:/etc/sams/sams.yaml:ro,Z
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8443/healthz', timeout=4)"]
+      interval: 30s
+      start_period: 20s
+secrets:
+  sams-admin-token:
+    external: true
+volumes:
+  sams-data:

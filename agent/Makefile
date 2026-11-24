@@ -1,11 +1,14 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo 0.1.0-dev)
-LDFLAGS := -s -w -X main.version=$(VERSION)
+LDFLAGS = -s -w -X main.version=$(VERSION)
 GOFLAGS := -trimpath
 PKG := ./cmd/sams-agent
 
 TARGETS := linux-amd64 linux-arm64 darwin-arm64 windows-amd64
 
-.PHONY: all build test vet clean $(TARGETS)
+PKG_VERSION ?= 0.1.0
+NFPM ?= nfpm
+
+.PHONY: all build test vet clean packages $(TARGETS)
 
 all: test $(TARGETS)
 
@@ -32,5 +35,16 @@ vet:
 test: vet
 	go test ./...
 
+# Linux .deb and .rpm for amd64 + arm64 (binary in /usr/bin, unit in /usr/lib/systemd/system)
+packages: VERSION = $(PKG_VERSION)
+packages: linux-amd64 linux-arm64
+	mkdir -p dist
+	for arch in amd64 arm64; do \
+	  mkdir -p bin/.pkg && cp bin/sams-agent-linux-$$arch bin/.pkg/sams-agent || exit 1; \
+	  for fmt in deb rpm; do \
+	    PKG_ARCH=$$arch PKG_VERSION=$(PKG_VERSION) $(NFPM) package --config packaging/nfpm.yaml --packager $$fmt --target dist/ || exit 1; \
+	  done; \
+	done
+
 clean:
-	rm -rf bin
+	rm -rf bin dist
